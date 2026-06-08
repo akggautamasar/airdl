@@ -45,7 +45,7 @@ UA = ("Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 "
 # Save location: phone storage if available, else local folder.
 SDCARD = "/sdcard/Download/AirTube"
 LOCAL  = os.path.expanduser("~/airtube/downloads")
-SAVE_DIR = SDCARD if os.path.isdir("/sdcard/Download") else LOCAL
+SAVE_DIR = "/tmp/downloads"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
