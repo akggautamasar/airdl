@@ -18,7 +18,7 @@ API_URL = "https://yt--air--78q4gfqgnf5j.code.run"
 user_links = {}
 
 def extract_video_id(url):
-patterns = [
+    patterns = [
 r"youtu.be/([A-Za-z0-9_-]{11})",
 r"v=([A-Za-z0-9_-]{11})"
 ]
