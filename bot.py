@@ -122,28 +122,27 @@ def yt_search(query, limit=6):
     return videos
 
 
-def yt_audio_via_service(video_id, title):
-    """Use your hosted yt service to fetch audio."""
+def yt_request_job(video_id, chat_id):
+    """Ask the hosted yt service to deliver audio to the chat directly (async)."""
     try:
         r = requests.post(
             YT_API + "/download",
-            json={"id": video_id, "mode": "audio", "telegram": False},
+            json={
+                "id": video_id,
+                "mode": "audio",
+                "telegram": True,
+                "chat_id": chat_id,
+            },
             timeout=30,
         )
         data = r.json()
-        if data.get("status") != "success":
-            log.error(f"yt service failed: {data}")
-            return None, None
-        audio_url = data.get("url") or data.get("download_url")
-        if not audio_url:
-            log.error(f"no url in yt service response: {data}")
-            return None, None
-        r2 = requests.get(audio_url, timeout=120, headers={"User-Agent": "Mozilla/5.0"})
-        fname = f"{safe_name(title)}.mp3"
-        return r2.content, fname
+        if data.get("status") == "success":
+            return data.get("job")
+        log.error(f"yt service failed: {data}")
+        return None
     except Exception as e:
-        log.error(f"yt_audio_via_service error: {e}")
-        return None, None
+        log.error(f"yt_request_job error: {e}")
+        return None
 
 
 def yt_audio_via_loader(video_id, title):
@@ -172,13 +171,6 @@ def yt_audio_via_loader(video_id, title):
     except Exception as e:
         log.error(f"loader.to error: {e}")
         return None, None
-
-
-def yt_get_audio(video_id, title):
-    audio, fname = yt_audio_via_service(video_id, title)
-    if audio:
-        return audio, fname
-    return yt_audio_via_loader(video_id, title)
 
 
 # ─── Keyboards ────────────────────────────────────────────────────
@@ -318,10 +310,19 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:  # youtube
             v = result["data"]
+            job = yt_request_job(v["id"], chat_id)
+            if job:
+                await query.message.reply_text(
+                    f"✅ Download started: {v['title']}\n"
+                    f"Job ID: {job}\n\n"
+                    f"The audio will arrive automatically when ready."
+                )
+                return
+            # fallback: loader.to (delivers inline)
             await query.message.reply_text(
-                f"⏳ Downloading {v['title']}...\nMay take 30–60 seconds."
+                f"⏳ Service busy, trying fallback for {v['title']}..."
             )
-            audio, fname = yt_get_audio(v["id"], v["title"])
+            audio, fname = yt_audio_via_loader(v["id"], v["title"])
             if not audio:
                 await query.message.reply_text("❌ Download failed. Try another.")
                 return
