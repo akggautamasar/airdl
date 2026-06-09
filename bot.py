@@ -122,8 +122,8 @@ def yt_search(query, limit=6):
     return videos
 
 
-def yt_request_job(video_id, chat_id):
-    """Ask the hosted yt service to deliver audio to the chat directly (async)."""
+def yt_request_job(video_id):
+    """Ask the hosted yt service to deliver audio (it uses its own env chat id)."""
     try:
         r = requests.post(
             YT_API + "/download",
@@ -131,7 +131,6 @@ def yt_request_job(video_id, chat_id):
                 "id": video_id,
                 "mode": "audio",
                 "telegram": True,
-                "chat_id": chat_id,
             },
             timeout=30,
         )
@@ -310,7 +309,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:  # youtube
             v = result["data"]
-            job = yt_request_job(v["id"], chat_id)
+            job = yt_request_job(v["id"])
             if job:
                 await query.message.reply_text(
                     f"✅ Download started: {v['title']}\n"
